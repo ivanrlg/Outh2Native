@@ -118,6 +118,8 @@ page 80100 "Test OAuth2"
                     Image = ChangeStatus;
                     trigger OnAction()
                     begin
+                        GetAccessTokenForGraph();
+
                         if AccessTokenForGraph = '' then
                             Error('No Access Token has been acquired');
 
@@ -153,6 +155,8 @@ page 80100 "Test OAuth2"
                     Image = ChangeStatus;
                     trigger OnAction()
                     begin
+                        GetAccessTokenForBC();
+
                         if AccessTokenForBC = '' then
                             Error('No Access Token has been acquired');
 
@@ -173,6 +177,7 @@ page 80100 "Test OAuth2"
     begin
         Scopes.Add(Constants.GetResourceURLForApiGraph() + '.default');
 
+        //Gets the access token from cache or a refreshed token via OAuth2 v2.0 protocol.
         OAuth2.AcquireAuthorizationCodeTokenFromCache(
             ClientId,
             ClientSecret,
@@ -182,6 +187,8 @@ page 80100 "Test OAuth2"
             AccessTokenForGraph);
 
         if AccessTokenForGraph = '' then
+
+            //Gets the authorization token based on the authorization code via the OAuth2 v2.0 code grant flow.
             OAuth2.AcquireTokenByAuthorizationCode(
                       ClientId,
                       ClientSecret,
@@ -197,7 +204,16 @@ page 80100 "Test OAuth2"
         else
             Result1 := 'Success';
 
+        //**************************  ISOLATE STORAGE ****************************//
+        //Delete the old Token if it exists
+        if IsolatedStorage.Contains('AccessTokenForGraph', DataScope::Module) then
+            IsolatedStorage.Delete('AccessTokenForGraph', DataScope::Module);
+
+        //Set new AccessTokenForGraph
+        IsolatedStorage.Set('AccessTokenForGraph', AccessTokenForGraph, DataScope::Module);
+
         SetResultStyle1();
+        //**************************  ISOLATE STORAGE ****************************//
     end;
 
     local procedure GetAccessTokenForBC()
@@ -208,6 +224,7 @@ page 80100 "Test OAuth2"
     begin
         Scopes.Add(Constants.GetResourceURLForApiBC() + '.default');
 
+        //Gets the access token from cache or a refreshed token via OAuth2 v2.0 protocol.
         OAuth2.AcquireAuthorizationCodeTokenFromCache(
         ClientId,
         ClientSecret,
@@ -217,6 +234,8 @@ page 80100 "Test OAuth2"
         AccessTokenForBC);
 
         if AccessTokenForBC = '' then
+
+            //Gets the authorization token based on the authorization code via the OAuth2 v2.0 code grant flow.
             OAuth2.AcquireTokenByAuthorizationCode(
                       ClientId,
                       ClientSecret,
@@ -232,7 +251,16 @@ page 80100 "Test OAuth2"
         else
             Result2 := 'Success';
 
+        //**************************  ISOLATE STORAGE ****************************//
+        //Delete the old Token if it exists
+        if IsolatedStorage.Contains('AccessTokenForBC', DataScope::Module) then
+            IsolatedStorage.Delete('AccessTokenForBC', DataScope::Module);
+
+        //Set new AccessTokenForBC
+        IsolatedStorage.Set('AccessTokenForBC', AccessTokenForBC, DataScope::Module);
+
         SetResultStyle2();
+        //**************************  ISOLATE STORAGE ****************************//
     end;
 
     trigger OnOpenPage()
@@ -244,6 +272,29 @@ page 80100 "Test OAuth2"
         ApiGraph := Constants.GetApiGraphMe();
         ApiListCompanies := Constants.GetApiListCompanies();
         OAuthAuthorityUrl := Constants.GetOAuthAuthorityUrl();
+
+        //**************************  ISOLATE STORAGE ****************************//
+
+        //We check if an AccessToken exists for AccessTokenForGraph
+        if IsolatedStorage.Contains('AccessTokenForGraph', DataScope::Module) then begin
+
+            //If it exists, we retrieve it with the 'Get method' and store it in the AccessTokenForGraph variable.
+            IsolatedStorage.Get('AccessTokenForGraph', DataScope::Module, AccessTokenForGraph);
+            Result1 := 'Success';
+            SetResultStyle1();
+        end;
+
+        //We check if an AccessToken exists for AccessTokenForBC
+        if IsolatedStorage.Contains('AccessTokenForBC', DataScope::Module) then begin
+
+            //If it exists, we retrieve it with the 'Get method' and store it in the AccessTokenForBC variable.
+            IsolatedStorage.Get('AccessTokenForBC', DataScope::Module, AccessTokenForBC);
+            Result2 := 'Success';
+            SetResultStyle2()
+        end;
+
+        //**************************  ISOLATE STORAGE ****************************//
+
     end;
 
     local procedure SetResultStyle1()
@@ -290,4 +341,5 @@ page 80100 "Test OAuth2"
         AccessTokenForBC, AccessTokenForGraph, AuthError, ErrorMessage, OAuthAuthorityUrl, RedirectURL : text;
         ApiGraph, ApiListCompanies : Text;
         Result1, Result2, ResultStyleExpr1, ResultStyleExpr2 : text;
+        EncryptionManagement: Codeunit "Cryptography Management";
 }
